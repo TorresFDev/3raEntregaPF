@@ -1,5 +1,9 @@
 import ProductDAO from "../dao/product.mongo.dao.js";
 import productRepository from "../repositories/product.repository.js";
+import CustomError from "../services/errors/custom_error.js";
+import EErrors from "../services/errors/enums.js";
+import { generateUserErrorInfo } from "../services/errors/info.js";
+import logger from "../helpers/logger.js";
 
 export const ProductService = new productRepository(new ProductDAO());
 
@@ -8,7 +12,7 @@ export class ProductServiceManager {
 
   validateData = (argumentToValidate, stringToShow) => {
     if (argumentToValidate) {
-      console.log(stringToShow);
+      logger.info(stringToShow);
       return;
     }
   };
@@ -64,56 +68,81 @@ export class ProductServiceManager {
     return resultToSend;
   };
 
-  addProduct = async (request, response) => {
-    const {
-      title,
-      description,
-      price,
-      thumbnail,
-      code,
-      stock,
-      category,
-      status,
-    } = request.body;
+  addProduct = async (request, response, next) => {
+    try {
+      const {
+        title,
+        description,
+        price,
+        thumbnail,
+        code,
+        stock,
+        category,
+        status,
+      } = request.body;
 
-    if (typeof status != "boolean") {
-      response.status(400).send("status must be boolean");
-      return;
+      const data = request.body;
+
+      if (typeof status != "boolean") {
+        logger.fatal(
+          "addProduct could not be executed because status is not a boolean"
+        );
+        CustomError.createError({
+          name: "Creation error",
+          cause: "Status must be a boolean",
+          message: "Error creating the product",
+          code: EErrors.INVALID_TYPES_ERROR,
+        });
+      }
+
+      if (!title || !description || !price || !stock || !code || !category) {
+        logger.fatal(
+          "addProduct could not be executed because one or more fields are missing: title, description, price, stock, code, category"
+        );
+        CustomError.createError({
+          name: "Creation error",
+          cause: generateUserErrorInfo(data),
+          message: "Error creating the product",
+          code: EErrors.INVALID_TYPES_ERROR,
+        });
+      }
+
+      let readFile = await this.readProductsDB();
+
+      const validateCode = readFile.find((el) => el.code === code);
+
+      if (validateCode) {
+        logger.warning(
+          "addProduct could not be executed because validateCode already exits"
+        );
+        response.status(400).send("Code indicated already exits");
+        return;
+      }
+
+      let internal_id;
+
+      internal_id =
+        readFile.length === 0
+          ? 1
+          : readFile[readFile.length - 1].internal_id + 1;
+      logger.info(internal_id);
+
+      let newItemInDB = await ProductService.create({
+        internal_id,
+        title,
+        description,
+        price,
+        thumbnail,
+        code,
+        stock,
+        category,
+        status,
+      });
+
+      response.send({ status: "Successful request", payload: newItemInDB });
+    } catch (error) {
+      next(error);
     }
-
-    if (!title || !description || !price || !stock || !code || !category) {
-      response.status(400).send("At least one field is missing");
-      return;
-    }
-
-    let readFile = await this.readProductsDB();
-
-    const validateCode = readFile.find((el) => el.code === code);
-
-    if (validateCode) {
-      response.status(400).send("Code indicated already exits");
-      return;
-    }
-
-    let internal_id;
-
-    internal_id =
-      readFile.length === 0 ? 1 : readFile[readFile.length - 1].internal_id + 1;
-    console.log(internal_id);
-
-    let newItemInDB = await ProductService.create({
-      internal_id,
-      title,
-      description,
-      price,
-      thumbnail,
-      code,
-      stock,
-      category,
-      status,
-    });
-
-    response.send({ status: "Successful request", payload: newItemInDB });
   };
 
   addProductFromSocket = async (request, response) => {
@@ -129,7 +158,7 @@ export class ProductServiceManager {
     } = request.body;
 
     if (!title || !description || !price || !stock || !code || !category) {
-      console.log("At least one field is missing");
+      logger.error("At least one field is missing");
       return;
     }
 
@@ -138,7 +167,7 @@ export class ProductServiceManager {
     const validateCode = readFile.find((el) => el.code === code);
 
     if (validateCode) {
-      console.log("Code indicated already exits");
+      logger.error("Code indicated already exits");
       return;
     }
 
@@ -146,7 +175,7 @@ export class ProductServiceManager {
 
     internal_id =
       readFile.length === 0 ? 1 : readFile[readFile.length - 1].internal_id + 1;
-    console.log(internal_id);
+    logger.info(internal_id);
 
     let newItemInDB = await ProductService.create({
       internal_id,
@@ -194,7 +223,8 @@ export class ProductServiceManager {
     this.validateData(!itemFounded, "id not found");
 
     for (const document of itemFounded) {
-      console.log("Documento:", document);
+      // console.log("Documento:", document);
+      logger.info("Documento:", document);
       const { _id } = document;
 
       const nuevoItem = {
@@ -242,11 +272,11 @@ export class ProductServiceManager {
     const itemToDelete = readFile.find((item) => item.internal_id === id);
 
     if (itemToDelete === undefined) {
-      console.log("not deleted");
+      logger.info("not deleted");
       return;
     }
 
     await ProductService.deleteOne(itemToDelete._id);
-    console.log("deleted");
+    logger.info("deleted");
   };
 }

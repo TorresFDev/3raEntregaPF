@@ -14,6 +14,11 @@ import { Server } from "socket.io";
 import { ProductServiceManager } from "./services/product.service.js";
 import viewsRouter from "./routers/chat.router.js";
 import messageModel from "./models/messages.model.js";
+import mockingRouter from "./routers/mockingproducts.router.js"
+import errorMiddleware from "./middlewares/error.middleware.js";
+import userRouter from "./routers/user.router.js"
+import loggerTest from "./routers/loggertest.router.js"
+import logger from "./helpers/logger.js";
 
 const serviceManager = new ProductServiceManager();
 
@@ -54,19 +59,24 @@ app.use("/api/cart", cartRouter);
 app.use("/api/sessions", sessionsRouter);
 app.use("/home", homeRouter);
 app.use("/chat", viewsRouter);
+app.use("/mockingproducts", mockingRouter)
+
+app.use('/users', userRouter)
+app.use(errorMiddleware)
+
+app.use("/loggerTest", loggerTest)
 
 await mongoose.connect(config.mongo.url_db_name);
 
 const httpServer = app.listen(config.apiserver.port, () => {
-  console.log("estoy en ejecucion");
+  logger.info("estoy en ejecucion");
 });
 
 const io = new Server(httpServer);
-//}}}
-// const messages = [];
+
 
 io.on("connection", (socket) => {
-  console.log("handshake");
+  logger.info("handshake");
 
   socket.on("formulario", (request) => {
     request.body = request;
@@ -86,15 +96,8 @@ io.on("connection", (socket) => {
     serviceManager.deleteProductFromSocket(idToDelete);
   });
 
-  //chat del profe
-  // socket.broadcast.emit('alerta')
-  // socket.emit('logs', messages)
-  // socket.on('message', data => {
-  //     messages.push(data)
-  //     io.emit('logs', messages)
-  // })
   socket.on("message", async (data) => {
-    console.log(data);
+    logger.info(data);
     messageModel.create({ user: "Persona", message: data });
 
     try {
@@ -102,21 +105,10 @@ io.on("connection", (socket) => {
         return await messageModel.find();
       };
       const result = await historial();
-      console.log(result);
+      logger.info(result);
       io.emit("historial", result);
     } catch (err) {
-      console.log(err);
+      logger.fatal(`Error on socket on creating Persona in database: ${err}`);
     }
   });
 });
-
-// const messages = []
-
-// io.on('connection', socket => {
-//     socket.broadcast.emit('alerta')
-//     socket.emit('logs', messages)
-//     socket.on('message', data => {
-//         messages.push(data)
-//         io.emit('logs', messages)
-//     })
-// })
