@@ -19,6 +19,9 @@ import errorMiddleware from "./middlewares/error.middleware.js";
 import userRouter from "./routers/user.router.js"
 import loggerTest from "./routers/loggertest.router.js"
 import logger from "./helpers/logger.js";
+import mailRouter from "./routers/mail.router.js"
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUiExpress from "swagger-ui-express";
 
 const serviceManager = new ProductServiceManager();
 
@@ -48,6 +51,20 @@ app.use(
   })
 );
 
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.1",
+    info:{
+      title: "Documentacion",
+      description: "Details"
+    }
+  },
+  apis:["./docs/**/*.yaml"]
+}
+
+const specs = swaggerJSDoc(swaggerOptions)
+app.use("/apidocs", swaggerUiExpress.serve, swaggerUiExpress.setup(specs))
+
 initializePassport();
 app.use(passport.initialize());
 app.use(passport.session());
@@ -65,6 +82,7 @@ app.use('/users', userRouter)
 app.use(errorMiddleware)
 
 app.use("/loggerTest", loggerTest)
+app.use("/mail", mailRouter)
 
 await mongoose.connect(config.mongo.url_db_name);
 

@@ -1,1 +1,9 @@
-fatal: addProduct could not be executed because status is not a boolean {"timestamp":"2023-09-21T14:56:01.318Z"}
+fatal: addProduct could not be executed because status is not a boolean {"timestamp":"2023-10-11T22:30:01.318Z"}
+error: Email does not exits {"timestamp":"2023-10-11T00:34:44.993Z"}
+error: Email does not exits {"timestamp":"2023-10-11T00:35:33.831Z"}
+error: Email does not exits {"timestamp":"2023-10-11T00:36:01.589Z"}
+error: Password must be diferent to previous {"timestamp":"2023-10-11T02:28:56.781Z"}
+error: Password must be diferent to previous {"timestamp":"2023-10-11T02:54:57.303Z"}
+error: Password must be diferent to previous {"timestamp":"2023-10-11T02:57:24.140Z"}
+error: Password must be diferent to previous {"timestamp":"2023-10-11T03:03:48.917Z"}
+fatal: addProduct could not be executed because one or more fields are missing: title, description, price, stock, code, category {"timestamp":"2023-10-11T19:56:47.878Z"}
